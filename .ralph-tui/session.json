@@ -3,10 +3,10 @@
   "sessionId": "da5b1f7a-2583-49e1-8d2d-1b4ba8811abd",
   "status": "running",
   "startedAt": "2026-01-31T11:32:56.940Z",
-  "updatedAt": "2026-01-31T11:45:12.694Z",
-  "currentIteration": 2,
+  "updatedAt": "2026-01-31T11:49:44.172Z",
+  "currentIteration": 3,
   "maxIterations": 5,
-  "tasksCompleted": 2,
+  "tasksCompleted": 3,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -29,8 +29,8 @@
       {
         "id": "US-003",
         "title": "LLM analysis of collected data",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-004",
@@ -72,6 +72,16 @@
       "durationMs": 241498,
       "startedAt": "2026-01-31T11:36:29.040Z",
       "endedAt": "2026-01-31T11:40:30.538Z"
+    },
+    {
+      "iteration": 3,
+      "status": "completed",
+      "taskId": "US-003",
+      "taskTitle": "LLM analysis of collected data",
+      "taskCompleted": true,
+      "durationMs": 281074,
+      "startedAt": "2026-01-31T11:40:31.618Z",
+      "endedAt": "2026-01-31T11:45:12.692Z"
     }
   ],
   "skippedTaskIds": [],

@@ -76,14 +76,15 @@
         "Parameter --output allows custom path"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "US-003"
       ],
       "labels": [
         "output",
         "markdown"
-      ]
+      ],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-005",
@@ -127,6 +128,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-01-31T11:45:12.693Z"
+    "updatedAt": "2026-01-31T11:49:44.170Z"
   }
 }
