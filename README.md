@@ -1,4 +1,4 @@
-# reddit-insights
+# subreddit-insights
 
 Turn any subreddit into product research in 2 minutes.
 
@@ -13,14 +13,14 @@ Analyzes Reddit discussions and extracts:
 ## Quick start
 
 ```bash
-npx reddit-insights r/SideProject
+npx subreddit-insights r/SideProject
 ```
 
 You'll need an [OpenAI API key](https://platform.openai.com/api-keys):
 
 ```bash
 export OPENAI_API_KEY=sk-...
-npx reddit-insights r/BeginnersRunning
+npx subreddit-insights r/BeginnersRunning
 ```
 
 ## Example output
@@ -44,7 +44,7 @@ Confidence: high
 ## Options
 
 ```bash
-reddit-insights <subreddit> [options]
+subreddit-insights <subreddit> [options]
 
 -p, --period    7d | 30d | 90d | 180d (default: 30d)
 -l, --limit     1-500 posts (default: 50)
@@ -54,8 +54,8 @@ reddit-insights <subreddit> [options]
 ## Install globally
 
 ```bash
-npm install -g reddit-insights
-reddit-insights productivity --period 7d --limit 100
+npm install -g subreddit-insights
+subreddit-insights productivity --period 7d --limit 100
 ```
 
 ## License

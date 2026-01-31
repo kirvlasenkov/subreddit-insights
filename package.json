@@ -1,10 +1,10 @@
 {
-  "name": "reddit-insights",
+  "name": "subreddit-insights",
   "version": "0.1.0",
   "description": "CLI tool for analyzing Reddit subreddits to extract product insights using AI",
   "type": "module",
   "bin": {
-    "reddit-insights": "./dist/cli.js"
+    "subreddit-insights": "./dist/cli.js"
   },
   "files": [
     "dist"

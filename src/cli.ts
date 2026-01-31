@@ -11,7 +11,7 @@ const VALID_PERIODS = ['7d', '30d', '90d', '180d'] as const;
 const program = new Command();
 
 program
-  .name('reddit-insights')
+  .name('subreddit-insights')
   .description(
     `Analyze Reddit subreddits to extract product insights using AI.
 
@@ -37,22 +37,22 @@ GPT-5.2, and generates a comprehensive markdown report with:
   )
   .option(
     '-o, --output <path>',
-    'Output file path (default: reddit-insights-<subreddit>-<date>.md)'
+    'Output file path (default: subreddit-insights-<subreddit>-<date>.md)'
   )
   .addHelpText(
     'after',
     `
 Examples:
-  $ reddit-insights BeginnersRunning
+  $ subreddit-insights BeginnersRunning
       Analyze r/BeginnersRunning with default settings (30 days, 50 posts)
 
-  $ reddit-insights r/productivity --period 7d --limit 100
+  $ subreddit-insights r/productivity --period 7d --limit 100
       Analyze last 7 days with up to 100 posts
 
-  $ reddit-insights https://reddit.com/r/remotework -o report.md
+  $ subreddit-insights https://reddit.com/r/remotework -o report.md
       Analyze from URL and save to custom output file
 
-  $ reddit-insights SideProject --period 90d
+  $ subreddit-insights SideProject --period 90d
       Analyze 90 days of posts from r/SideProject
 
 Requirements:
@@ -61,10 +61,10 @@ Requirements:
 
   Set the key before running:
     $ export OPENAI_API_KEY=your-api-key-here
-    $ reddit-insights <subreddit>
+    $ subreddit-insights <subreddit>
 
   Or inline:
-    $ OPENAI_API_KEY=your-key reddit-insights <subreddit>
+    $ OPENAI_API_KEY=your-key subreddit-insights <subreddit>
 `
   )
   .action(async (subredditInput: string, options: { period: string; limit: string; output?: string }) => {
