@@ -97,14 +97,15 @@
         "Skill registered in Claude Code configuration"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "US-004"
       ],
       "labels": [
         "integration",
         "claude-code"
-      ]
+      ],
+      "completionNotes": "Completed by agent"
     },
     {
       "id": "US-006",
@@ -128,6 +129,6 @@
     }
   ],
   "metadata": {
-    "updatedAt": "2026-01-31T11:49:44.170Z"
+    "updatedAt": "2026-01-31T11:52:23.833Z"
   }
 }
