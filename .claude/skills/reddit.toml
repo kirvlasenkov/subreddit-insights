@@ -1,0 +1,74 @@
+# Reddit Insights Skill for Claude Code
+# Analyzes Reddit subreddits to extract product insights
+
+name = "reddit"
+description = "Analyze a Reddit subreddit to extract product insights, pain points, and user desires. Use when you need to understand what users in a subreddit are discussing, their problems, and potential product opportunities."
+
+# Trigger patterns for automatic skill detection
+triggers = [
+    "analyze reddit",
+    "reddit insights",
+    "subreddit analysis",
+    "analyze subreddit",
+    "reddit pain points",
+    "what are users saying on reddit"
+]
+
+[prompt]
+content = """
+You are invoking the reddit-insights CLI tool to analyze a Reddit subreddit.
+
+## Usage
+The tool is invoked as:
+```
+npm run start -- <subreddit> [options]
+```
+
+Or if built:
+```
+node dist/cli.js <subreddit> [options]
+```
+
+## Arguments
+- `<subreddit>` (required): The subreddit to analyze. Accepts formats:
+  - Bare name: `BeginnersRunning`
+  - With prefix: `r/BeginnersRunning`
+  - Full URL: `https://www.reddit.com/r/BeginnersRunning`
+
+## Options
+- `-p, --period <period>`: Time period filter. Values: `7d`, `30d` (default), `90d`, `180d`
+- `-l, --limit <number>`: Maximum posts to fetch (1-500, default: 50)
+- `-o, --output <path>`: Custom output file path for the report
+
+## User Request
+The user wants to analyze: $ARGUMENTS
+
+## Instructions
+1. Parse the user's request to extract:
+   - The subreddit name (required)
+   - Optional period flag (--period or -p)
+   - Optional limit flag (--limit or -l)
+   - Optional output path (--output or -o)
+
+2. Run the CLI command using Bash:
+   ```bash
+   cd /Users/vlasenckov/vibecoding/reddit-parsing-for-products && npm run start -- <subreddit> [options]
+   ```
+
+3. Wait for the command to complete. It will:
+   - Fetch posts and comments from Reddit
+   - Analyze the data using Claude LLM
+   - Generate a markdown report
+
+4. When complete, inform the user of:
+   - The output file path (displayed in the command output)
+   - A brief summary of what was analyzed
+
+5. If the user wants to see the results, read and summarize the generated markdown report.
+
+## Examples
+- `/reddit BeginnersRunning` - Analyze r/BeginnersRunning with defaults
+- `/reddit r/productivity --period 7d` - Last 7 days of r/productivity
+- `/reddit homelab --limit 100 --period 90d` - 100 posts from last 90 days
+- `/reddit https://www.reddit.com/r/selfhosted -p 30d -l 25` - Full URL with options
+"""
