@@ -31,10 +31,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vlasenckov/reddit-insights.git"
+    "url": "git+https://github.com/kirvlasenkov/reddit-insights.git"
   },
-  "homepage": "https://github.com/vlasenckov/reddit-insights#readme",
-  "author": "vlasenckov",
+  "homepage": "https://github.com/kirvlasenkov/reddit-insights#readme",
+  "author": "kirvlasenkov",
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
