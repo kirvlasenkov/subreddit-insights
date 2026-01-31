@@ -1,5 +1,7 @@
 # subreddit-insights
 
+![subreddit-insights](banner.png)
+
 **Stop scrolling Reddit for hours. Get product insights in 2 minutes.**
 
 You know the drill: you have a product idea, so you dive into Reddit to understand your audience. Three hours later, you've read 200 posts and still can't articulate what people actually want.
