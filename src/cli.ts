@@ -11,22 +11,60 @@ const program = new Command();
 
 program
   .name('reddit-insights')
-  .description('Analyze Reddit subreddits to extract product insights')
+  .description(
+    `Analyze Reddit subreddits to extract product insights using AI.
+
+Fetches posts and comments from any public subreddit, analyzes them with
+Claude AI, and generates a comprehensive markdown report with:
+  - Pain points and user desires
+  - Behavioral patterns
+  - Notable quotes
+  - Audience language analysis
+  - Product hypotheses`
+  )
   .version('0.1.0')
-  .argument('<subreddit>', 'Subreddit name (e.g., BeginnersRunning, r/BeginnersRunning, or full URL)')
+  .argument('<subreddit>', 'Subreddit to analyze (name, r/name, or full URL)')
   .option(
     '-p, --period <period>',
-    `Time period to filter posts (${VALID_PERIODS.join(', ')})`,
+    `Time period for posts: ${VALID_PERIODS.join(', ')} (default: ${DEFAULT_OPTIONS.period})`,
     DEFAULT_OPTIONS.period
   )
   .option(
     '-l, --limit <number>',
-    'Maximum number of posts to fetch',
+    `Max posts to fetch: 1-500 (default: ${DEFAULT_OPTIONS.limit})`,
     String(DEFAULT_OPTIONS.limit)
   )
   .option(
     '-o, --output <path>',
-    'Custom output file path for the report'
+    'Output file path (default: reddit-insights-<subreddit>-<date>.md)'
+  )
+  .addHelpText(
+    'after',
+    `
+Examples:
+  $ reddit-insights BeginnersRunning
+      Analyze r/BeginnersRunning with default settings (30 days, 50 posts)
+
+  $ reddit-insights r/productivity --period 7d --limit 100
+      Analyze last 7 days with up to 100 posts
+
+  $ reddit-insights https://reddit.com/r/remotework -o report.md
+      Analyze from URL and save to custom output file
+
+  $ reddit-insights SideProject --period 90d
+      Analyze 90 days of posts from r/SideProject
+
+Requirements:
+  ANTHROPIC_API_KEY    Required environment variable for Claude AI analysis.
+                       Get your API key at: https://console.anthropic.com/
+
+  Set the key before running:
+    $ export ANTHROPIC_API_KEY=your-api-key-here
+    $ reddit-insights <subreddit>
+
+  Or inline:
+    $ ANTHROPIC_API_KEY=your-key reddit-insights <subreddit>
+`
   )
   .action(async (subredditInput: string, options: { period: string; limit: string; output?: string }) => {
     const result = parseSubreddit(subredditInput);
