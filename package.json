@@ -31,9 +31,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kirvlasenkov/reddit-insights.git"
+    "url": "git+https://github.com/kirvlasenkov/subreddit-insights.git"
   },
-  "homepage": "https://github.com/kirvlasenkov/reddit-insights#readme",
+  "homepage": "https://github.com/kirvlasenkov/subreddit-insights#readme",
   "author": "kirvlasenkov",
   "devDependencies": {
     "@types/node": "^20.10.0",

@@ -10,17 +10,24 @@ Analyzes Reddit discussions and extracts:
 - **Product hypotheses** — testable ideas with evidence
 - **Audience language** — how they talk, what terms they use
 
-## Quick start
+## Installation
 
 ```bash
-npx subreddit-insights r/SideProject
+npm install -g subreddit-insights
 ```
 
-You'll need an [OpenAI API key](https://platform.openai.com/api-keys):
+## Setup
+
+Get an [OpenAI API key](https://platform.openai.com/api-keys) and set it:
 
 ```bash
 export OPENAI_API_KEY=sk-...
-npx subreddit-insights r/BeginnersRunning
+```
+
+## Usage
+
+```bash
+subreddit-insights r/SideProject
 ```
 
 ## Example output
@@ -43,19 +50,20 @@ Confidence: high
 
 ## Options
 
-```bash
-subreddit-insights <subreddit> [options]
-
+```
 -p, --period    7d | 30d | 90d | 180d (default: 30d)
 -l, --limit     1-500 posts (default: 50)
 -o, --output    custom output path
 ```
 
-## Install globally
+## Examples
 
 ```bash
-npm install -g subreddit-insights
-subreddit-insights productivity --period 7d --limit 100
+# Last 7 days, up to 100 posts
+subreddit-insights r/productivity --period 7d --limit 100
+
+# Save to custom file
+subreddit-insights r/remotework -o report.md
 ```
 
 ## License
