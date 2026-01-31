@@ -9,7 +9,7 @@ This CLI tool does that research for you — and gives you structured, actionabl
 ## What you get
 
 ```
-$ subreddit-insights r/SideProject
+$ subreddit-insights r/techsales
 ```
 
 ↓ 2 minutes later ↓
@@ -17,35 +17,41 @@ $ subreddit-insights r/SideProject
 ```markdown
 ## Pain Points
 
-### High friction in user onboarding (~18 mentions)
-> "44 seconds and multiple steps to watch a 6 second video?"
-> "I gave up after the third popup asking me to sign up"
+### CRM busywork killing selling time (~24 mentions)
+> "I spend 2 hours a day just updating Salesforce instead of actually selling"
+> "My manager cares more about CRM hygiene than closed deals"
 
-### Pricing confusion (~12 mentions)
-> "Is it free? Freemium? I couldn't figure out what I'd pay"
+### Cold outreach becoming ineffective (~19 mentions)
+> "Response rates dropped from 5% to under 1% this year"
+> "Everyone's inbox is flooded, nobody reads cold emails anymore"
+
+### Unrealistic quotas in down market (~15 mentions)
+> "Leadership won't adjust targets even though the market completely changed"
 
 ## Desires
 
-### One-click solutions (~15 mentions)
-> "Just let me paste a link and get the result"
+### Better prospect research tools (~21 mentions)
+> "I'd pay good money for something that tells me what to say BEFORE the call"
+> "Wish I could know their tech stack and recent news without 30 min of googling"
 
-### Transparent pricing upfront (~9 mentions)
-> "Show me the price before I waste time signing up"
+### Automation that doesn't feel robotic (~12 mentions)
+> "I want to automate follow-ups but not sound like a bot"
 
 ## Audience Language
 
-They say "side project" not "startup"
-They say "ship it" not "launch"
-They say "ramen profitable" not "break-even"
+They say "pipeline" not "sales funnel"
+They say "disco call" not "discovery meeting"
+They say "hitting quota" not "reaching targets"
+They say "tech stack" not "software tools"
 
 ## Product Hypotheses
 
-### Hypothesis: Zero-friction access
-Users who want quick results would pay for a tool that
-requires no signup — because current alternatives cause
-abandonment at the registration wall.
+### Hypothesis: Pre-call intelligence tool
+SDRs who struggle with cold outreach would pay for automated
+prospect research — because manual research takes 30 min per lead
+and most skip it entirely.
 
-**Evidence:** 18 mentions of friction, 15 mentions of one-click preference
+**Evidence:** 24 mentions of time waste, 21 mentions wanting better research
 **Confidence:** High
 ```
 
