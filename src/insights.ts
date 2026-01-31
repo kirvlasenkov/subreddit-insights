@@ -1,7 +1,13 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { RedditData, RedditComment } from './reddit.js';
+import type { FetchOptions } from './reddit.js';
 import { analyzeWithLLM, type AnalysisResult } from './llm.js';
+
+export interface ReportOptions {
+  outputPath?: string;
+  period?: FetchOptions['period'];
+}
 
 // Count total comments including replies
 function countComments(comments: RedditComment[]): number {
@@ -16,45 +22,52 @@ function countComments(comments: RedditComment[]): number {
 function formatAnalysisSection(analysis: AnalysisResult): string {
   const sections: string[] = [];
 
+  // TL;DR
+  if (analysis.tldr) {
+    sections.push('## TL;DR\n');
+    sections.push(analysis.tldr);
+    sections.push('');
+  }
+
   // Pain Points
   if (analysis.pains.length > 0) {
     sections.push('## Pain Points\n');
     for (const pain of analysis.pains) {
       const frequencyBadge = pain.frequency === 'high' ? '🔴' : pain.frequency === 'medium' ? '🟡' : '🟢';
-      sections.push(`### ${frequencyBadge} ${pain.description}\n`);
+      const mentionText = pain.mentionCount > 0 ? ` (~${pain.mentionCount} mentions)` : '';
+      sections.push(`### ${frequencyBadge} ${pain.description}${mentionText}\n`);
       sections.push(`**Frequency:** ${pain.frequency}\n`);
       if (pain.evidence.length > 0) {
-        sections.push('**Evidence:**');
-        for (const ev of pain.evidence) {
-          sections.push(`- "${ev}"`);
+        sections.push('**Quotes:**');
+        for (const ev of pain.evidence.slice(0, 3)) {
+          sections.push(`> "${ev}"`);
         }
       }
       sections.push('');
     }
   }
 
-  // Behavioral Patterns
-  if (analysis.patterns.length > 0) {
-    sections.push('## Behavioral Patterns\n');
-    for (const pattern of analysis.patterns) {
-      sections.push(`### ${pattern.name}`);
-      sections.push(`${pattern.description}`);
-      sections.push(`*Observed in ~${pattern.occurrences} discussions*\n`);
+  // User Desires
+  if (analysis.desires.length > 0) {
+    sections.push('## User Desires\n');
+    for (const desire of analysis.desires) {
+      const frequencyBadge = desire.frequency === 'high' ? '🔴' : desire.frequency === 'medium' ? '🟡' : '🟢';
+      const mentionText = desire.mentionCount > 0 ? ` (~${desire.mentionCount} mentions)` : '';
+      sections.push(`### ${frequencyBadge} ${desire.description}${mentionText}\n`);
+      sections.push(`**Frequency:** ${desire.frequency}\n`);
+      if (desire.evidence.length > 0) {
+        sections.push('**Quotes:**');
+        for (const ev of desire.evidence.slice(0, 3)) {
+          sections.push(`> "${ev}"`);
+        }
+      }
+      sections.push('');
     }
   }
 
-  // Notable Quotes
-  if (analysis.quotes.length > 0) {
-    sections.push('## Notable Quotes\n');
-    for (const quote of analysis.quotes) {
-      sections.push(`> "${quote.text}"`);
-      sections.push(`> — u/${quote.author} (score: ${quote.score}) | *${quote.context}*\n`);
-    }
-  }
-
-  // User Language
+  // Audience Language
   if (analysis.userLanguage.commonTerms.length > 0 || analysis.userLanguage.emotionalPatterns.length > 0) {
-    sections.push('## User Language & Tone\n');
+    sections.push('## Audience Language\n');
     sections.push(`**Overall Tone:** ${analysis.userLanguage.tone}\n`);
 
     if (analysis.userLanguage.commonTerms.length > 0) {
@@ -87,13 +100,34 @@ function formatAnalysisSection(analysis: AnalysisResult): string {
     }
   }
 
+  // Behavioral Patterns
+  if (analysis.patterns.length > 0) {
+    sections.push('## Behavioral Patterns\n');
+    for (const pattern of analysis.patterns) {
+      sections.push(`### ${pattern.name}`);
+      sections.push(`${pattern.description}`);
+      sections.push(`*Observed in ~${pattern.occurrences} discussions*\n`);
+    }
+  }
+
+  // Notable Quotes
+  if (analysis.quotes.length > 0) {
+    sections.push('## Notable Quotes\n');
+    for (const quote of analysis.quotes) {
+      sections.push(`> "${quote.text}"`);
+      sections.push(`> — u/${quote.author} (score: ${quote.score}) | *${quote.context}*\n`);
+    }
+  }
+
   return sections.join('\n');
 }
 
-export async function runInsights(subreddit: string, data?: RedditData): Promise<string> {
+export async function runInsights(subreddit: string, data?: RedditData, options?: ReportOptions): Promise<string> {
   const date = new Date().toISOString().split('T')[0];
-  const filename = `reddit-insights-${subreddit}-${date}.md`;
-  const outputPath = path.resolve(process.cwd(), filename);
+  const defaultFilename = `reddit-insights-${subreddit}-${date}.md`;
+  const outputPath = options?.outputPath
+    ? path.resolve(process.cwd(), options.outputPath)
+    : path.resolve(process.cwd(), defaultFilename);
 
   let content: string;
 
@@ -134,10 +168,13 @@ export async function runInsights(subreddit: string, data?: RedditData): Promise
 `;
     }
 
+    const periodLabel = options?.period ? `Last ${options.period.replace('d', ' days')}` : 'Unknown period';
+
     content = `# Reddit Insights: r/${subreddit}
 
 **Generated:** ${new Date().toISOString()}
 **Subreddit:** r/${subreddit}
+**Period:** ${periodLabel}
 
 ---
 

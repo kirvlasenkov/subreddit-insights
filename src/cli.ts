@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import { parseSubreddit } from './subreddit.js';
-import { runInsights } from './insights.js';
+import { runInsights, type ReportOptions } from './insights.js';
 import { fetchRedditData, DEFAULT_OPTIONS, type FetchOptions } from './reddit.js';
 
 const VALID_PERIODS = ['7d', '30d', '90d', '180d'] as const;
@@ -24,7 +24,11 @@ program
     'Maximum number of posts to fetch',
     String(DEFAULT_OPTIONS.limit)
   )
-  .action(async (subredditInput: string, options: { period: string; limit: string }) => {
+  .option(
+    '-o, --output <path>',
+    'Custom output file path for the report'
+  )
+  .action(async (subredditInput: string, options: { period: string; limit: string; output?: string }) => {
     const result = parseSubreddit(subredditInput);
 
     if (!result.success) {
@@ -60,7 +64,11 @@ program
       }
 
       // Generate report
-      const outputPath = await runInsights(result.subreddit, fetchResult.data);
+      const reportOptions: ReportOptions = {
+        outputPath: options.output,
+        period: fetchOptions.period,
+      };
+      const outputPath = await runInsights(result.subreddit, fetchResult.data, reportOptions);
       console.log(`Report saved to: ${outputPath}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error occurred';

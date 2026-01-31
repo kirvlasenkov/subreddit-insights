@@ -11,7 +11,9 @@ const CHARS_PER_TOKEN = 4; // Rough estimate for tokenization
 const MAX_CHARS_PER_CHUNK = MAX_TOKENS_PER_CHUNK * CHARS_PER_TOKEN;
 
 export interface AnalysisResult {
+  tldr: string;
   pains: Pain[];
+  desires: Desire[];
   patterns: Pattern[];
   quotes: Quote[];
   userLanguage: UserLanguage;
@@ -21,6 +23,14 @@ export interface AnalysisResult {
 export interface Pain {
   description: string;
   frequency: 'high' | 'medium' | 'low';
+  mentionCount: number;
+  evidence: string[];
+}
+
+export interface Desire {
+  description: string;
+  frequency: 'high' | 'medium' | 'low';
+  mentionCount: number;
   evidence: string[];
 }
 
@@ -159,28 +169,37 @@ ${text}
 
 Analyze the above discussions and provide a structured JSON response with the following fields:
 
-1. "pains": Array of user pain points. Each pain should have:
+1. "tldr": A concise 2-3 sentence executive summary of the key insights from this subreddit.
+
+2. "pains": Array of user pain points. Each pain should have:
    - "description": Clear description of the pain point
    - "frequency": "high", "medium", or "low" based on how often it appears
-   - "evidence": Array of 1-3 brief quotes or references supporting this pain
+   - "mentionCount": Approximate number of times this pain was mentioned
+   - "evidence": Array of 2-3 exact quotes from users that demonstrate this pain
 
-2. "patterns": Array of behavioral patterns observed. Each pattern should have:
+3. "desires": Array of what users want or wish for. Each desire should have:
+   - "description": Clear description of the user desire/want
+   - "frequency": "high", "medium", or "low" based on how often it appears
+   - "mentionCount": Approximate number of times this desire was mentioned
+   - "evidence": Array of 2-3 exact quotes from users expressing this desire
+
+4. "patterns": Array of behavioral patterns observed. Each pattern should have:
    - "name": Short name for the pattern
    - "description": What users are doing/experiencing
    - "occurrences": Approximate count of posts/comments showing this pattern
 
-3. "quotes": Array of 5-10 notable, insightful quotes. Each quote should have:
+5. "quotes": Array of 5-10 notable, insightful quotes. Each quote should have:
    - "text": The exact quote (can be truncated with ... if very long)
    - "context": Brief context (e.g., "discussing X", "asking about Y")
    - "author": Reddit username
    - "score": The score if available, or 0
 
-4. "userLanguage": Object describing how users communicate:
+6. "userLanguage": Object describing how users communicate:
    - "commonTerms": Array of 5-10 frequently used terms, jargon, or phrases
    - "tone": Overall emotional tone (e.g., "frustrated but seeking help", "enthusiastic", "technical")
    - "emotionalPatterns": Array of 2-5 emotional patterns observed
 
-5. "hypotheses": Array of product hypotheses based on the data. Each hypothesis should have:
+7. "hypotheses": Array of product hypotheses based on the data. Each hypothesis should have:
    - "statement": A testable product hypothesis in the format "Users who X would benefit from Y because Z"
    - "confidence": "high", "medium", or "low"
    - "supportingEvidence": Array of 1-3 brief evidence points
@@ -194,6 +213,10 @@ function mergeAnalysisResults(results: AnalysisResult[]): AnalysisResult {
     return results[0];
   }
 
+  // Merge TL;DRs - combine into a coherent summary
+  const tldrs = results.map(r => r.tldr).filter(Boolean);
+  const mergedTldr = tldrs.length > 0 ? tldrs[0] : '';
+
   // Merge pains, deduplicating by description
   const painMap = new Map<string, Pain>();
   for (const result of results) {
@@ -202,6 +225,7 @@ function mergeAnalysisResults(results: AnalysisResult[]): AnalysisResult {
       if (painMap.has(key)) {
         const existing = painMap.get(key)!;
         existing.evidence.push(...pain.evidence);
+        existing.mentionCount += pain.mentionCount || 0;
         // Upgrade frequency if we see it again
         if (pain.frequency === 'high' || existing.frequency === 'high') {
           existing.frequency = 'high';
@@ -209,7 +233,27 @@ function mergeAnalysisResults(results: AnalysisResult[]): AnalysisResult {
           existing.frequency = 'medium';
         }
       } else {
-        painMap.set(key, { ...pain, evidence: [...pain.evidence] });
+        painMap.set(key, { ...pain, evidence: [...pain.evidence], mentionCount: pain.mentionCount || 0 });
+      }
+    }
+  }
+
+  // Merge desires, deduplicating by description
+  const desireMap = new Map<string, Desire>();
+  for (const result of results) {
+    for (const desire of result.desires) {
+      const key = desire.description.toLowerCase();
+      if (desireMap.has(key)) {
+        const existing = desireMap.get(key)!;
+        existing.evidence.push(...desire.evidence);
+        existing.mentionCount += desire.mentionCount || 0;
+        if (desire.frequency === 'high' || existing.frequency === 'high') {
+          existing.frequency = 'high';
+        } else if (desire.frequency === 'medium' || existing.frequency === 'medium') {
+          existing.frequency = 'medium';
+        }
+      } else {
+        desireMap.set(key, { ...desire, evidence: [...desire.evidence], mentionCount: desire.mentionCount || 0 });
       }
     }
   }
@@ -259,7 +303,9 @@ function mergeAnalysisResults(results: AnalysisResult[]): AnalysisResult {
   }
 
   return {
+    tldr: mergedTldr,
     pains: Array.from(painMap.values()).slice(0, 10),
+    desires: Array.from(desireMap.values()).slice(0, 10),
     patterns: Array.from(patternMap.values()).slice(0, 10),
     quotes: topQuotes,
     userLanguage: {
@@ -291,7 +337,9 @@ function parseAnalysisResponse(response: string): AnalysisResult {
 
   // Validate and provide defaults
   return {
+    tldr: typeof parsed.tldr === 'string' ? parsed.tldr : '',
     pains: Array.isArray(parsed.pains) ? parsed.pains : [],
+    desires: Array.isArray(parsed.desires) ? parsed.desires : [],
     patterns: Array.isArray(parsed.patterns) ? parsed.patterns : [],
     quotes: Array.isArray(parsed.quotes) ? parsed.quotes : [],
     userLanguage: parsed.userLanguage || { commonTerms: [], tone: 'unknown', emotionalPatterns: [] },
@@ -382,7 +430,9 @@ export async function analyzeWithLLM(
  */
 export function getEmptyAnalysis(): AnalysisResult {
   return {
+    tldr: '',
     pains: [],
+    desires: [],
     patterns: [],
     quotes: [],
     userLanguage: { commonTerms: [], tone: 'unknown', emotionalPatterns: [] },
