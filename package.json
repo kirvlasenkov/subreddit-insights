@@ -1,11 +1,14 @@
 {
   "name": "reddit-insights",
   "version": "0.1.0",
-  "description": "CLI tool for analyzing Reddit subreddits to extract product insights",
+  "description": "CLI tool for analyzing Reddit subreddits to extract product insights using AI",
   "type": "module",
   "bin": {
     "reddit-insights": "./dist/cli.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/cli.js",
@@ -13,15 +16,25 @@
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "reddit",
     "insights",
     "product-management",
-    "cli"
+    "cli",
+    "ai",
+    "openai",
+    "market-research"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vlasenckov/reddit-insights.git"
+  },
+  "homepage": "https://github.com/vlasenckov/reddit-insights#readme",
+  "author": "vlasenckov",
   "devDependencies": {
     "@types/node": "^20.10.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
@@ -32,8 +45,9 @@
     "vitest": "^1.0.0"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.72.1",
-    "commander": "^11.1.0"
+    "commander": "^11.1.0",
+    "dotenv": "^17.2.3",
+    "openai": "^6.17.0"
   },
   "engines": {
     "node": ">=18.0.0"

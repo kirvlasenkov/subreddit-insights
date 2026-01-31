@@ -1,9 +1,9 @@
 /**
- * LLM analysis module using Claude API.
+ * LLM analysis module using OpenAI API.
  * Handles chunking of large datasets and structured analysis extraction.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import type { RedditData, RedditPost, RedditComment } from './reddit.js';
 
 const MAX_TOKENS_PER_CHUNK = 80000; // ~80k tokens per chunk (conservative estimate)
@@ -333,7 +333,19 @@ function parseAnalysisResponse(response: string): AnalysisResult {
   }
   jsonStr = jsonStr.trim();
 
-  const parsed = JSON.parse(jsonStr);
+  // Try to parse, with fallback for common issues
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
+    // Try to extract JSON object from the string if it's wrapped
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      parsed = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error('Could not extract valid JSON from response');
+    }
+  }
 
   // Validate and provide defaults
   return {
@@ -355,18 +367,18 @@ export async function analyzeWithLLM(
   data: RedditData
 ): Promise<{ success: true; analysis: AnalysisResult } | { success: false; error: string }> {
   // Check for API key
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.OPENAI_API_KEY) {
     return {
       success: false,
-      error: 'ANTHROPIC_API_KEY environment variable is not set. Please set it to use LLM analysis.',
+      error: 'OPENAI_API_KEY environment variable is not set. Please set it to use LLM analysis.',
     };
   }
 
-  const client = new Anthropic();
+  const client = new OpenAI();
   const chunks = chunkData(data);
   const totalChunks = chunks.length;
 
-  console.log(`Analyzing data with Claude (${totalChunks} chunk${totalChunks > 1 ? 's' : ''})...`);
+  console.log(`Analyzing data with GPT-5.2 (${totalChunks} chunk${totalChunks > 1 ? 's' : ''})...`);
 
   const results: AnalysisResult[] = [];
 
@@ -383,9 +395,9 @@ export async function analyzeWithLLM(
     const prompt = buildAnalysisPrompt(text, isPartialChunk, chunkInfo);
 
     try {
-      const message = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+      const completion = await client.chat.completions.create({
+        model: 'gpt-5.2',
+        max_completion_tokens: 4096,
         messages: [
           {
             role: 'user',
@@ -395,15 +407,15 @@ export async function analyzeWithLLM(
       });
 
       // Extract text from response
-      const textContent = message.content.find(block => block.type === 'text');
-      if (!textContent || textContent.type !== 'text') {
+      const responseText = completion.choices[0]?.message?.content;
+      if (!responseText) {
         return {
           success: false,
-          error: 'Unexpected response format from Claude API',
+          error: 'Unexpected response format from OpenAI API',
         };
       }
 
-      const analysis = parseAnalysisResponse(textContent.text);
+      const analysis = parseAnalysisResponse(responseText);
       results.push(analysis);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown API error';

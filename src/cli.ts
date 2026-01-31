@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
 import { Command } from 'commander';
 import { parseSubreddit } from './subreddit.js';
 import { runInsights, type ReportOptions } from './insights.js';
@@ -15,7 +16,7 @@ program
     `Analyze Reddit subreddits to extract product insights using AI.
 
 Fetches posts and comments from any public subreddit, analyzes them with
-Claude AI, and generates a comprehensive markdown report with:
+GPT-5.2, and generates a comprehensive markdown report with:
   - Pain points and user desires
   - Behavioral patterns
   - Notable quotes
@@ -55,15 +56,15 @@ Examples:
       Analyze 90 days of posts from r/SideProject
 
 Requirements:
-  ANTHROPIC_API_KEY    Required environment variable for Claude AI analysis.
-                       Get your API key at: https://console.anthropic.com/
+  OPENAI_API_KEY       Required environment variable for GPT-5.2 analysis.
+                       Get your API key at: https://platform.openai.com/api-keys
 
   Set the key before running:
-    $ export ANTHROPIC_API_KEY=your-api-key-here
+    $ export OPENAI_API_KEY=your-api-key-here
     $ reddit-insights <subreddit>
 
   Or inline:
-    $ ANTHROPIC_API_KEY=your-key reddit-insights <subreddit>
+    $ OPENAI_API_KEY=your-key reddit-insights <subreddit>
 `
   )
   .action(async (subredditInput: string, options: { period: string; limit: string; output?: string }) => {

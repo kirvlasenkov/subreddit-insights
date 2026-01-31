@@ -3,3 +3,11 @@ dist/
 *.log
 .DS_Store
 reddit-insights-*.md
+
+# Environment variables (contains API keys)
+.env
+.env.local
+.env.*.local
+
+# Ralph TUI workspace files
+.ralph-tui/

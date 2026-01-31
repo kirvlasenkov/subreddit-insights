@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { RedditData, RedditPost, RedditComment } from './reddit.js';
 
-// Mock the Anthropic module before importing the module under test
-vi.mock('@anthropic-ai/sdk', () => {
+// Mock the OpenAI module before importing the module under test
+vi.mock('openai', () => {
   return {
     default: vi.fn().mockImplementation(() => ({
-      messages: {
-        create: vi.fn(),
+      chat: {
+        completions: {
+          create: vi.fn(),
+        },
       },
     })),
   };
@@ -14,7 +16,7 @@ vi.mock('@anthropic-ai/sdk', () => {
 
 // Import after mocking
 import { analyzeWithLLM, getEmptyAnalysis } from './llm.js';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
 // Helper to create mock data
 function createMockRedditData(postCount: number): RedditData {
@@ -59,13 +61,16 @@ function createMockRedditData(postCount: number): RedditData {
 
 // Sample valid analysis response
 const validAnalysisResponse = JSON.stringify({
+  tldr: 'Test summary of insights',
   pains: [
     {
       description: 'Users struggle with feature X',
       frequency: 'high',
+      mentionCount: 10,
       evidence: ['Quote 1', 'Quote 2'],
     },
   ],
+  desires: [],
   patterns: [
     {
       name: 'Pattern A',
@@ -100,7 +105,7 @@ describe('analyzeWithLLM', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env = { ...originalEnv, ANTHROPIC_API_KEY: 'test-key' };
+    process.env = { ...originalEnv, OPENAI_API_KEY: 'test-key' };
   });
 
   afterEach(() => {
@@ -108,25 +113,25 @@ describe('analyzeWithLLM', () => {
   });
 
   it('should return error when API key is not set', async () => {
-    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.OPENAI_API_KEY;
 
     const data = createMockRedditData(1);
     const result = await analyzeWithLLM(data);
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error).toContain('ANTHROPIC_API_KEY');
+      expect(result.error).toContain('OPENAI_API_KEY');
     }
   });
 
   it('should successfully analyze small dataset', async () => {
     const mockCreate = vi.fn().mockResolvedValue({
-      content: [{ type: 'text', text: validAnalysisResponse }],
+      choices: [{ message: { content: validAnalysisResponse } }],
     });
 
-    vi.mocked(Anthropic).mockImplementation(() => ({
-      messages: { create: mockCreate },
-    }) as unknown as Anthropic);
+    vi.mocked(OpenAI).mockImplementation(() => ({
+      chat: { completions: { create: mockCreate } },
+    }) as unknown as OpenAI);
 
     const data = createMockRedditData(5);
     const result = await analyzeWithLLM(data);
@@ -144,12 +149,12 @@ describe('analyzeWithLLM', () => {
   it('should handle JSON wrapped in markdown code blocks', async () => {
     const wrappedResponse = '```json\n' + validAnalysisResponse + '\n```';
     const mockCreate = vi.fn().mockResolvedValue({
-      content: [{ type: 'text', text: wrappedResponse }],
+      choices: [{ message: { content: wrappedResponse } }],
     });
 
-    vi.mocked(Anthropic).mockImplementation(() => ({
-      messages: { create: mockCreate },
-    }) as unknown as Anthropic);
+    vi.mocked(OpenAI).mockImplementation(() => ({
+      chat: { completions: { create: mockCreate } },
+    }) as unknown as OpenAI);
 
     const data = createMockRedditData(3);
     const result = await analyzeWithLLM(data);
@@ -163,9 +168,9 @@ describe('analyzeWithLLM', () => {
   it('should handle API errors gracefully', async () => {
     const mockCreate = vi.fn().mockRejectedValue(new Error('API rate limit exceeded'));
 
-    vi.mocked(Anthropic).mockImplementation(() => ({
-      messages: { create: mockCreate },
-    }) as unknown as Anthropic);
+    vi.mocked(OpenAI).mockImplementation(() => ({
+      chat: { completions: { create: mockCreate } },
+    }) as unknown as OpenAI);
 
     const data = createMockRedditData(2);
     const result = await analyzeWithLLM(data);
@@ -178,12 +183,12 @@ describe('analyzeWithLLM', () => {
 
   it('should handle unexpected response format', async () => {
     const mockCreate = vi.fn().mockResolvedValue({
-      content: [{ type: 'image', url: 'http://example.com' }],
+      choices: [{ message: { content: null } }],
     });
 
-    vi.mocked(Anthropic).mockImplementation(() => ({
-      messages: { create: mockCreate },
-    }) as unknown as Anthropic);
+    vi.mocked(OpenAI).mockImplementation(() => ({
+      chat: { completions: { create: mockCreate } },
+    }) as unknown as OpenAI);
 
     const data = createMockRedditData(2);
     const result = await analyzeWithLLM(data);
@@ -196,12 +201,12 @@ describe('analyzeWithLLM', () => {
 
   it('should handle malformed JSON in response', async () => {
     const mockCreate = vi.fn().mockResolvedValue({
-      content: [{ type: 'text', text: '{ invalid json }' }],
+      choices: [{ message: { content: '{ invalid json }' } }],
     });
 
-    vi.mocked(Anthropic).mockImplementation(() => ({
-      messages: { create: mockCreate },
-    }) as unknown as Anthropic);
+    vi.mocked(OpenAI).mockImplementation(() => ({
+      chat: { completions: { create: mockCreate } },
+    }) as unknown as OpenAI);
 
     const data = createMockRedditData(2);
     const result = await analyzeWithLLM(data);
