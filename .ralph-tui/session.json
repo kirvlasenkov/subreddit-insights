@@ -3,10 +3,10 @@
   "sessionId": "da5b1f7a-2583-49e1-8d2d-1b4ba8811abd",
   "status": "running",
   "startedAt": "2026-01-31T11:32:56.940Z",
-  "updatedAt": "2026-01-31T11:52:23.834Z",
-  "currentIteration": 4,
+  "updatedAt": "2026-01-31T11:56:36.760Z",
+  "currentIteration": 5,
   "maxIterations": 5,
-  "tasksCompleted": 4,
+  "tasksCompleted": 5,
   "isPaused": false,
   "agentPlugin": "claude",
   "trackerState": {
@@ -41,8 +41,8 @@
       {
         "id": "US-005",
         "title": "Claude Code Skill integration",
-        "status": "open",
-        "completedInSession": false
+        "status": "completed",
+        "completedInSession": true
       },
       {
         "id": "US-006",
@@ -92,6 +92,16 @@
       "durationMs": 270396,
       "startedAt": "2026-01-31T11:45:13.774Z",
       "endedAt": "2026-01-31T11:49:44.170Z"
+    },
+    {
+      "iteration": 5,
+      "status": "completed",
+      "taskId": "US-005",
+      "taskTitle": "Claude Code Skill integration",
+      "taskCompleted": true,
+      "durationMs": 158583,
+      "startedAt": "2026-01-31T11:49:45.249Z",
+      "endedAt": "2026-01-31T11:52:23.832Z"
     }
   ],
   "skippedTaskIds": [],

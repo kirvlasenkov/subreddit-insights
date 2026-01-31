@@ -118,17 +118,18 @@
         "Shows information about requirements (API keys if needed)"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "dependsOn": [
         "US-001"
       ],
       "labels": [
         "documentation",
         "ux"
-      ]
+      ],
+      "completionNotes": "Completed by agent"
     }
   ],
   "metadata": {
-    "updatedAt": "2026-01-31T11:52:23.833Z"
+    "updatedAt": "2026-01-31T11:56:36.758Z"
   }
 }
