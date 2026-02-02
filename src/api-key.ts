@@ -69,59 +69,57 @@ export async function promptForApiKey(): Promise<string | null> {
     stdin.resume();
     stdin.setEncoding('utf8');
 
-    const onData = (char: string) => {
-      // Handle Ctrl+C
-      if (char === '\u0003') {
-        stdin.setRawMode(wasRaw ?? false);
-        stdin.removeListener('data', onData);
-        rl.close();
-        console.log('');
-        resolve(null);
-        return;
-      }
-
-      // Handle Enter
-      if (char === '\r' || char === '\n') {
-        stdin.setRawMode(wasRaw ?? false);
-        stdin.removeListener('data', onData);
-        rl.close();
-        console.log('');
-        resolve(input.trim() || null);
-        return;
-      }
-
-      // Handle Backspace
-      if (char === '\u007F' || char === '\b') {
-        if (input.length > 0) {
-          input = input.slice(0, -1);
-          process.stdout.write('\b \b');
+    const onData = (chunk: string) => {
+      // Handle multi-character input (e.g., paste)
+      for (const char of chunk) {
+        // Handle Ctrl+C - exit process as user expects
+        if (char === '\u0003') {
+          stdin.setRawMode(wasRaw ?? false);
+          stdin.removeListener('data', onData);
+          rl.close();
+          console.log('');
+          process.exit(130); // 128 + SIGINT(2)
         }
-        return;
-      }
 
-      // Handle Escape
-      if (char === '\u001B') {
-        stdin.setRawMode(wasRaw ?? false);
-        stdin.removeListener('data', onData);
-        rl.close();
-        console.log('');
-        resolve(null);
-        return;
-      }
+        // Handle Enter
+        if (char === '\r' || char === '\n') {
+          stdin.setRawMode(wasRaw ?? false);
+          stdin.removeListener('data', onData);
+          rl.close();
+          console.log('');
+          resolve(input.trim() || null);
+          return;
+        }
 
-      // Regular character - add to input and show asterisk
-      input += char;
-      process.stdout.write('*');
+        // Handle Backspace
+        if (char === '\u007F' || char === '\b') {
+          if (input.length > 0) {
+            input = input.slice(0, -1);
+            process.stdout.write('\b \b');
+          }
+          continue;
+        }
+
+        // Handle Escape
+        if (char === '\u001B') {
+          stdin.setRawMode(wasRaw ?? false);
+          stdin.removeListener('data', onData);
+          rl.close();
+          console.log('');
+          resolve(null);
+          return;
+        }
+
+        // Regular character - add to input and show asterisk
+        input += char;
+        process.stdout.write('*');
+      }
     };
 
     stdin.on('data', onData);
   });
 }
 
-/**
- * Validate API key by making a test request to OpenAI.
- * Uses a minimal API call to check if the key is valid.
- */
 /**
  * Check error type by name (more reliable than instanceof with mocks).
  */
@@ -132,9 +130,11 @@ function isOpenAIError(error: unknown, errorName: string): boolean {
   return false;
 }
 
+const VALIDATION_TIMEOUT_MS = 10000; // 10 seconds
+
 export async function validateApiKey(apiKey: string): Promise<{ valid: true } | { valid: false; error: string }> {
   try {
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({ apiKey, timeout: VALIDATION_TIMEOUT_MS });
 
     // Make a minimal API call to validate the key
     // Using models.list() as it's a lightweight endpoint
@@ -151,6 +151,9 @@ export async function validateApiKey(apiKey: string): Promise<{ valid: true } | 
     }
     if (isOpenAIError(error, 'APIConnectionError')) {
       return { valid: false, error: 'Could not connect to OpenAI. Please check your internet connection.' };
+    }
+    if (isOpenAIError(error, 'APIConnectionTimeoutError')) {
+      return { valid: false, error: 'Connection to OpenAI timed out. Please try again.' };
     }
 
     const message = error instanceof Error ? error.message : 'Unknown error';
