@@ -5,6 +5,7 @@ import { Command } from 'commander';
 import { parseSubreddit } from './subreddit.js';
 import { runInsights, type ReportOptions } from './insights.js';
 import { fetchRedditData, DEFAULT_OPTIONS, type FetchOptions } from './reddit.js';
+import { ensureApiKey } from './api-key.js';
 
 const VALID_PERIODS = ['7d', '30d', '90d', '180d'] as const;
 
@@ -68,6 +69,13 @@ Requirements:
 `
   )
   .action(async (subredditInput: string, options: { period: string; limit: string; output?: string }) => {
+    // Check API key first (before any network requests)
+    const apiKeyResult = await ensureApiKey();
+    if (!apiKeyResult.success) {
+      console.error(`Error: ${apiKeyResult.error}`);
+      process.exit(1);
+    }
+
     const result = parseSubreddit(subredditInput);
 
     if (!result.success) {
