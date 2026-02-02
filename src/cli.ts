@@ -6,6 +6,7 @@ import { parseSubreddit } from './subreddit.js';
 import { runInsights, type ReportOptions } from './insights.js';
 import { fetchRedditData, DEFAULT_OPTIONS, type FetchOptions } from './reddit.js';
 import { ensureApiKey } from './api-key.js';
+import { authLogin, authLogout, authStatus } from './auth.js';
 
 const VALID_PERIODS = ['7d', '30d', '90d', '180d'] as const;
 
@@ -123,5 +124,66 @@ Requirements:
       process.exit(1);
     }
   });
+
+// Auth command with subcommands
+const authCommand = new Command('auth')
+  .description('Manage Reddit OAuth authentication');
+
+authCommand
+  .command('login')
+  .description('Login to Reddit using OAuth')
+  .requiredOption('--client-id <id>', 'Reddit app client ID')
+  .requiredOption('--client-secret <secret>', 'Reddit app client secret')
+  .action(async (options: { clientId: string; clientSecret: string }) => {
+    const result = await authLogin(options.clientId, options.clientSecret);
+    if (result.success) {
+      console.log(result.message);
+    } else {
+      console.error(`Error: ${result.error}`);
+      process.exit(1);
+    }
+  });
+
+authCommand
+  .command('logout')
+  .description('Logout and clear saved credentials')
+  .action(async () => {
+    const result = await authLogout();
+    if (result.success) {
+      console.log(result.message);
+    } else {
+      console.error(`Error: ${result.error}`);
+      process.exit(1);
+    }
+  });
+
+authCommand
+  .command('status')
+  .description('Show current authentication status')
+  .action(async () => {
+    const result = await authStatus();
+    if (!result.success) {
+      console.error(`Error: ${result.error}`);
+      process.exit(1);
+    }
+
+    if (!result.loggedIn) {
+      console.log('Not logged in to Reddit.');
+      console.log('');
+      console.log('To login, run:');
+      console.log('  subreddit-insights auth login --client-id <id> --client-secret <secret>');
+      return;
+    }
+
+    console.log('Logged in to Reddit.');
+    if (result.tokenValid) {
+      const expiresAt = new Date(result.expiresAt!);
+      console.log(`Token valid until: ${expiresAt.toLocaleString()}`);
+    } else {
+      console.log('Token has expired. It will be refreshed automatically on next use.');
+    }
+  });
+
+program.addCommand(authCommand);
 
 program.parse();
