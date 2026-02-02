@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchRedditData, DEFAULT_OPTIONS } from './reddit.js';
+import { fetchRedditData, DEFAULT_OPTIONS, setTokenProvider } from './reddit.js';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -180,6 +180,146 @@ describe('Reddit API', () => {
     it('has correct default values', () => {
       expect(DEFAULT_OPTIONS.period).toBe('30d');
       expect(DEFAULT_OPTIONS.limit).toBe(50);
+    });
+  });
+
+  describe('OAuth fallback', () => {
+    afterEach(() => {
+      // Reset token provider after each test
+      setTokenProvider(null);
+    });
+
+    it('falls back to OAuth API when public API returns 403', async () => {
+      const mockTokenProvider = vi.fn().mockResolvedValue('test-access-token');
+      setTokenProvider(mockTokenProvider);
+
+      const postsResponse = createMockPostsResponse([
+        { id: 'post1', title: 'OAuth Post', score: 100 },
+      ]);
+
+      const commentsResponse = createMockCommentsResponse([
+        { id: 'comment1', body: 'OAuth comment' },
+      ]);
+
+      // First call (public API) returns 403
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      // Second call (OAuth API) succeeds
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(postsResponse),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(commentsResponse),
+        });
+
+      const result = await fetchRedditData('privatesubreddit', { period: '7d', limit: 1 });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.posts).toHaveLength(1);
+        expect(result.data.posts[0].title).toBe('OAuth Post');
+      }
+
+      // Check that OAuth endpoint was used with Bearer token
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+      expect(mockFetch).toHaveBeenNthCalledWith(2, expect.stringContaining('oauth.reddit.com'), expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Bearer test-access-token',
+        }),
+      }));
+    });
+
+    it('returns error when 403 and no token provider is set', async () => {
+      setTokenProvider(null);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      const result = await fetchRedditData('privatesubreddit', DEFAULT_OPTIONS);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain('private or banned');
+      }
+    });
+
+    it('returns error when 403 and token provider returns null', async () => {
+      const mockTokenProvider = vi.fn().mockResolvedValue(null);
+      setTokenProvider(mockTokenProvider);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      const result = await fetchRedditData('privatesubreddit', DEFAULT_OPTIONS);
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain('private or banned');
+      }
+    });
+
+    it('uses OAuth for all subsequent requests after fallback', async () => {
+      const mockTokenProvider = vi.fn().mockResolvedValue('test-access-token');
+      setTokenProvider(mockTokenProvider);
+
+      const postsResponse = createMockPostsResponse([
+        { id: 'post1', title: 'Post 1', score: 100 },
+        { id: 'post2', title: 'Post 2', score: 50 },
+      ]);
+
+      const commentsResponse = createMockCommentsResponse([
+        { id: 'comment1', body: 'Comment' },
+      ]);
+
+      // First call (public API) returns 403
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      // All OAuth calls succeed
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(postsResponse),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(commentsResponse),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(commentsResponse),
+        });
+
+      const result = await fetchRedditData('privatesubreddit', { period: '7d', limit: 2 });
+
+      expect(result.success).toBe(true);
+
+      // All calls after the first 403 should use OAuth endpoint
+      const oauthCalls = mockFetch.mock.calls.filter(call =>
+        (call[0] as string).includes('oauth.reddit.com')
+      );
+      expect(oauthCalls.length).toBe(3); // posts + 2 comment fetches
     });
   });
 });

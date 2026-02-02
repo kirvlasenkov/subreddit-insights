@@ -1,11 +1,38 @@
 /**
  * Reddit API client for fetching posts and comments.
  * Uses Reddit's public JSON API (no authentication required for public subreddits).
+ * Falls back to OAuth API (oauth.reddit.com) when public API returns 403.
  */
 
 const USER_AGENT = 'reddit-insights-cli/0.1.0';
-const BASE_URL = 'https://www.reddit.com';
+const PUBLIC_BASE_URL = 'https://www.reddit.com';
+const OAUTH_BASE_URL = 'https://oauth.reddit.com';
 const REQUEST_DELAY_MS = 1000; // Respect rate limits
+
+// Token provider function type - returns access token or null
+export type TokenProvider = () => Promise<string | null>;
+
+// Token provider for OAuth fallback
+let tokenProvider: TokenProvider | null = null;
+
+// Flag to track if we should use OAuth (set after first 403)
+let useOAuth = false;
+
+/**
+ * Set the token provider for OAuth fallback.
+ * The provider should return a valid access token or null.
+ */
+export function setTokenProvider(provider: TokenProvider | null): void {
+  tokenProvider = provider;
+  useOAuth = false; // Reset OAuth mode when provider changes
+}
+
+/**
+ * Reset OAuth mode (for testing).
+ */
+export function resetOAuthMode(): void {
+  useOAuth = false;
+}
 
 export interface RedditPost {
   id: string;
@@ -122,20 +149,41 @@ function parseComment(
   };
 }
 
-// Fetch with retry and error handling
+// Build URL based on whether we're using OAuth
+function buildUrl(path: string): string {
+  const baseUrl = useOAuth ? OAUTH_BASE_URL : PUBLIC_BASE_URL;
+  return `${baseUrl}${path}`;
+}
+
+// Get headers based on whether we're using OAuth
+async function getHeaders(): Promise<Record<string, string>> {
+  const headers: Record<string, string> = {
+    'User-Agent': USER_AGENT,
+  };
+
+  if (useOAuth && tokenProvider) {
+    const token = await tokenProvider();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  return headers;
+}
+
+// Fetch with retry and error handling, with OAuth fallback on 403
 async function fetchWithRetry(
-  url: string,
+  urlPath: string,
   retries = 3
 ): Promise<{ success: true; data: unknown } | { success: false; error: string }> {
   let lastError = '';
 
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': USER_AGENT,
-        },
-      });
+      const url = buildUrl(urlPath);
+      const headers = await getHeaders();
+
+      const response = await fetch(url, { headers });
 
       if (response.status === 429) {
         // Rate limited - wait and retry
@@ -151,6 +199,16 @@ async function fetchWithRetry(
       }
 
       if (response.status === 403) {
+        // Try OAuth fallback if we haven't already and have a token provider
+        if (!useOAuth && tokenProvider) {
+          const token = await tokenProvider();
+          if (token) {
+            console.log('Public API returned 403, falling back to OAuth...');
+            useOAuth = true;
+            // Retry with OAuth immediately (don't count as retry attempt)
+            return fetchWithRetry(urlPath, retries);
+          }
+        }
         return {
           success: false,
           error: 'Access forbidden. The subreddit may be private or banned.',
@@ -196,12 +254,12 @@ async function fetchPosts(
   // Fetch in batches (Reddit limits to 100 per request)
   while (posts.length < options.limit) {
     const batchSize = Math.min(100, options.limit - posts.length);
-    let url = `${BASE_URL}/r/${subreddit}/top.json?t=${timeFilter}&limit=${batchSize}`;
+    let urlPath = `/r/${subreddit}/top.json?t=${timeFilter}&limit=${batchSize}`;
     if (after) {
-      url += `&after=${after}`;
+      urlPath += `&after=${after}`;
     }
 
-    const result = await fetchWithRetry(url);
+    const result = await fetchWithRetry(urlPath);
     if (!result.success) {
       return result;
     }
@@ -243,9 +301,9 @@ async function fetchPostComments(
   subreddit: string,
   postId: string
 ): Promise<{ success: true; comments: RedditComment[] } | { success: false; error: string }> {
-  const url = `${BASE_URL}/r/${subreddit}/comments/${postId}.json?limit=100&depth=3`;
+  const urlPath = `/r/${subreddit}/comments/${postId}.json?limit=100&depth=3`;
 
-  const result = await fetchWithRetry(url);
+  const result = await fetchWithRetry(urlPath);
   if (!result.success) {
     return result;
   }
@@ -280,6 +338,9 @@ export async function fetchRedditData(
   subreddit: string,
   options: FetchOptions
 ): Promise<FetchResult> {
+  // Reset OAuth mode at the start of each fetch
+  useOAuth = false;
+
   console.log(
     `Fetching top posts from r/${subreddit} (period: ${options.period}, limit: ${options.limit})...`
   );
