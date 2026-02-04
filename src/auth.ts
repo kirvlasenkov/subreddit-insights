@@ -1,10 +1,19 @@
 /**
  * Auth CLI commands module.
- * Provides login, logout, and status commands for Reddit OAuth.
+ * Provides login, logout, and status commands for Reddit authentication.
+ * Supports both OAuth and browser-based authentication.
  */
 
-import { loadConfig, saveConfig, clearConfig, type Config } from './config.js';
+import {
+  loadConfig,
+  saveConfig,
+  clearConfig,
+  hasBrowserAuth,
+  hasOAuthAuth,
+  type Config,
+} from './config.js';
 import { authorizeReddit } from './reddit-auth.js';
+import { browserLogin, filterEssentialCookies } from './browser-auth.js';
 
 export interface AuthSuccessResult {
   success: true;
@@ -19,8 +28,10 @@ export interface AuthErrorResult {
 export interface AuthStatusResult {
   success: true;
   loggedIn: boolean;
+  authType: 'oauth' | 'browser' | 'none';
   tokenValid: boolean;
   expiresAt?: number;
+  username?: string;
 }
 
 export type AuthResult = AuthSuccessResult | AuthErrorResult;
@@ -49,6 +60,7 @@ export async function authLogin(
   }
 
   const config: Config = {
+    authType: 'oauth',
     accessToken: result.tokens.accessToken,
     refreshToken: result.tokens.refreshToken,
     expiresAt: result.tokens.expiresAt,
@@ -59,6 +71,33 @@ export async function authLogin(
   return {
     success: true,
     message: 'Successfully logged in to Reddit!',
+  };
+}
+
+/**
+ * Perform browser-based login.
+ * Opens a real browser window for user to log in manually.
+ * No Reddit App required - just username and password.
+ */
+export async function authBrowserLogin(): Promise<AuthResult> {
+  const result = await browserLogin();
+
+  if (!result.success) {
+    return result;
+  }
+
+  const config: Config = {
+    authType: 'browser',
+    cookies: filterEssentialCookies(result.cookies),
+    username: result.username,
+    cookiesUpdatedAt: Date.now(),
+  };
+
+  saveConfig(config);
+
+  return {
+    success: true,
+    message: `Successfully logged in as ${result.username}!`,
   };
 }
 
@@ -91,17 +130,40 @@ export async function authStatus(): Promise<StatusResult> {
     return {
       success: true,
       loggedIn: false,
+      authType: 'none',
       tokenValid: false,
     };
   }
 
-  const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
-  const isValid = Date.now() < config.expiresAt - bufferMs;
+  // Check browser auth
+  if (hasBrowserAuth(config)) {
+    return {
+      success: true,
+      loggedIn: true,
+      authType: 'browser',
+      tokenValid: true,
+      username: config.username,
+    };
+  }
+
+  // Check OAuth auth
+  if (hasOAuthAuth(config)) {
+    const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
+    const isValid = Date.now() < (config.expiresAt || 0) - bufferMs;
+
+    return {
+      success: true,
+      loggedIn: true,
+      authType: 'oauth',
+      tokenValid: isValid,
+      expiresAt: config.expiresAt,
+    };
+  }
 
   return {
     success: true,
-    loggedIn: true,
-    tokenValid: isValid,
-    expiresAt: config.expiresAt,
+    loggedIn: false,
+    authType: 'none',
+    tokenValid: false,
   };
 }

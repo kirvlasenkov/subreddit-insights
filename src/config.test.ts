@@ -57,6 +57,7 @@ describe('loadConfig', () => {
 
   it('should load and parse config when file exists', () => {
     const mockConfig: Config = {
+      authType: 'oauth',
       accessToken: 'test-access-token',
       refreshToken: 'test-refresh-token',
       expiresAt: 1234567890,
@@ -104,6 +105,7 @@ describe('saveConfig', () => {
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
     const config: Config = {
+      authType: 'oauth',
       accessToken: 'test-access-token',
       refreshToken: 'test-refresh-token',
       expiresAt: 1234567890,
@@ -126,6 +128,7 @@ describe('saveConfig', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
 
     const config: Config = {
+      authType: 'oauth',
       accessToken: 'test-access-token',
       refreshToken: 'test-refresh-token',
       expiresAt: 1234567890,
@@ -141,6 +144,7 @@ describe('saveConfig', () => {
     vi.mocked(fs.existsSync).mockReturnValue(true);
 
     const config: Config = {
+      authType: 'oauth',
       accessToken: 'token',
       refreshToken: 'refresh',
       expiresAt: 0,

@@ -49,6 +49,7 @@ describe('auth module', () => {
       expect(result.success).toBe(true);
       expect(redditAuth.authorizeReddit).toHaveBeenCalledWith('client-id', 'client-secret');
       expect(config.saveConfig).toHaveBeenCalledWith({
+        authType: 'oauth',
         accessToken: mockTokens.accessToken,
         refreshToken: mockTokens.refreshToken,
         expiresAt: mockTokens.expiresAt,
@@ -117,20 +118,24 @@ describe('auth module', () => {
   });
 
   describe('authStatus', () => {
-    it('should show logged in status with valid token', async () => {
+    it('should show logged in status with valid OAuth token', async () => {
       const mockConfig: config.Config = {
+        authType: 'oauth',
         accessToken: 'test-access-token',
         refreshToken: 'test-refresh-token',
         expiresAt: Date.now() + 3600000, // 1 hour from now
       };
 
       vi.mocked(config.loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(config.hasBrowserAuth).mockReturnValue(false);
+      vi.mocked(config.hasOAuthAuth).mockReturnValue(true);
 
       const result = await authStatus();
 
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.loggedIn).toBe(true);
+        expect(result.authType).toBe('oauth');
         expect(result.tokenValid).toBe(true);
         expect(result.expiresAt).toBe(mockConfig.expiresAt);
       }
@@ -138,12 +143,15 @@ describe('auth module', () => {
 
     it('should show logged in but expired status', async () => {
       const mockConfig: config.Config = {
+        authType: 'oauth',
         accessToken: 'test-access-token',
         refreshToken: 'test-refresh-token',
         expiresAt: Date.now() - 3600000, // 1 hour ago
       };
 
       vi.mocked(config.loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(config.hasBrowserAuth).mockReturnValue(false);
+      vi.mocked(config.hasOAuthAuth).mockReturnValue(true);
 
       const result = await authStatus();
 
@@ -154,8 +162,31 @@ describe('auth module', () => {
       }
     });
 
+    it('should show logged in status with browser auth', async () => {
+      const mockConfig: config.Config = {
+        authType: 'browser',
+        cookies: [{ name: 'reddit_session', value: 'abc123' }] as config.Config['cookies'],
+        username: 'testuser',
+        cookiesUpdatedAt: Date.now(),
+      };
+
+      vi.mocked(config.loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(config.hasBrowserAuth).mockReturnValue(true);
+
+      const result = await authStatus();
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.loggedIn).toBe(true);
+        expect(result.authType).toBe('browser');
+        expect(result.username).toBe('testuser');
+      }
+    });
+
     it('should show not logged in status when no config', async () => {
       vi.mocked(config.loadConfig).mockReturnValue(null);
+      vi.mocked(config.hasBrowserAuth).mockReturnValue(false);
+      vi.mocked(config.hasOAuthAuth).mockReturnValue(false);
 
       const result = await authStatus();
 

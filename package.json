@@ -37,6 +37,7 @@
   "author": "kirvlasenkov",
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/puppeteer": "^5.4.7",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "eslint": "^8.55.0",
@@ -47,7 +48,8 @@
   "dependencies": {
     "commander": "^11.1.0",
     "dotenv": "^17.2.3",
-    "openai": "^6.17.0"
+    "openai": "^6.17.0",
+    "puppeteer-core": "^24.36.1"
   },
   "engines": {
     "node": ">=18.0.0"

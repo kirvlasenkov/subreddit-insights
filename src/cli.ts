@@ -6,7 +6,7 @@ import { parseSubreddit } from './subreddit.js';
 import { runInsights, type ReportOptions } from './insights.js';
 import { fetchRedditData, DEFAULT_OPTIONS, type FetchOptions } from './reddit.js';
 import { ensureApiKey } from './api-key.js';
-import { authLogin, authLogout, authStatus } from './auth.js';
+import { authLogin, authLogout, authStatus, authBrowserLogin } from './auth.js';
 
 const VALID_PERIODS = ['7d', '30d', '90d', '180d'] as const;
 
@@ -131,11 +131,35 @@ const authCommand = new Command('auth')
 
 authCommand
   .command('login')
-  .description('Login to Reddit using OAuth')
-  .requiredOption('--client-id <id>', 'Reddit app client ID')
-  .requiredOption('--client-secret <secret>', 'Reddit app client secret')
-  .action(async (options: { clientId: string; clientSecret: string }) => {
-    const result = await authLogin(options.clientId, options.clientSecret);
+  .description('Login to Reddit (OAuth or browser-based)')
+  .option('--browser', 'Use browser-based login (no Reddit App required)')
+  .option('--client-id <id>', 'Reddit app client ID (for OAuth)')
+  .option('--client-secret <secret>', 'Reddit app client secret (for OAuth)')
+  .action(async (options: { browser?: boolean; clientId?: string; clientSecret?: string }) => {
+    let result;
+
+    if (options.browser) {
+      // Browser-based login - no client ID/secret needed
+      result = await authBrowserLogin();
+    } else {
+      // OAuth login - requires client ID and secret
+      if (!options.clientId) {
+        console.error('Error: --client-id is required for OAuth login.');
+        console.error('');
+        console.error('For easier login without Reddit App, use:');
+        console.error('  subreddit-insights auth login --browser');
+        process.exit(1);
+      }
+      if (!options.clientSecret) {
+        console.error('Error: --client-secret is required for OAuth login.');
+        console.error('');
+        console.error('For easier login without Reddit App, use:');
+        console.error('  subreddit-insights auth login --browser');
+        process.exit(1);
+      }
+      result = await authLogin(options.clientId, options.clientSecret);
+    }
+
     if (result.success) {
       console.log(result.message);
     } else {
@@ -171,16 +195,24 @@ authCommand
       console.log('Not logged in to Reddit.');
       console.log('');
       console.log('To login, run:');
+      console.log('  subreddit-insights auth login --browser');
+      console.log('');
+      console.log('Or with OAuth (requires Reddit App):');
       console.log('  subreddit-insights auth login --client-id <id> --client-secret <secret>');
       return;
     }
 
-    console.log('Logged in to Reddit.');
-    if (result.tokenValid) {
-      const expiresAt = new Date(result.expiresAt!);
-      console.log(`Token valid until: ${expiresAt.toLocaleString()}`);
+    if (result.authType === 'browser') {
+      console.log(`Logged in to Reddit as ${result.username} (browser auth).`);
+      console.log('Session cookies are active.');
     } else {
-      console.log('Token has expired. It will be refreshed automatically on next use.');
+      console.log('Logged in to Reddit (OAuth).');
+      if (result.tokenValid) {
+        const expiresAt = new Date(result.expiresAt!);
+        console.log(`Token valid until: ${expiresAt.toLocaleString()}`);
+      } else {
+        console.log('Token has expired. It will be refreshed automatically on next use.');
+      }
     }
   });
 

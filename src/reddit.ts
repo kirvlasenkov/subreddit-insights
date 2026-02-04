@@ -1,7 +1,8 @@
 /**
  * Reddit API client for fetching posts and comments.
  * Uses Reddit's public JSON API (no authentication required for public subreddits).
- * Falls back to OAuth API (oauth.reddit.com) when public API returns 403.
+ * Falls back to authenticated requests when public API returns 403.
+ * Supports both OAuth tokens and browser session cookies.
  */
 
 const USER_AGENT = 'reddit-insights-cli/0.1.0';
@@ -12,11 +13,18 @@ const REQUEST_DELAY_MS = 1000; // Respect rate limits
 // Token provider function type - returns access token or null
 export type TokenProvider = () => Promise<string | null>;
 
+// Cookie provider function type - returns cookie header string or null
+export type CookieProvider = () => Promise<string | null>;
+
 // Token provider for OAuth fallback
 let tokenProvider: TokenProvider | null = null;
 
-// Flag to track if we should use OAuth (set after first 403)
-let useOAuth = false;
+// Cookie provider for browser auth fallback
+let cookieProvider: CookieProvider | null = null;
+
+// Auth mode: 'none' | 'oauth' | 'cookies'
+type AuthMode = 'none' | 'oauth' | 'cookies';
+let authMode: AuthMode = 'none';
 
 /**
  * Set the token provider for OAuth fallback.
@@ -24,14 +32,23 @@ let useOAuth = false;
  */
 export function setTokenProvider(provider: TokenProvider | null): void {
   tokenProvider = provider;
-  useOAuth = false; // Reset OAuth mode when provider changes
+  authMode = 'none'; // Reset auth mode when provider changes
 }
 
 /**
- * Reset OAuth mode (for testing).
+ * Set the cookie provider for browser auth fallback.
+ * The provider should return a cookie header string or null.
+ */
+export function setCookieProvider(provider: CookieProvider | null): void {
+  cookieProvider = provider;
+  authMode = 'none'; // Reset auth mode when provider changes
+}
+
+/**
+ * Reset auth mode (for testing).
  */
 export function resetOAuthMode(): void {
-  useOAuth = false;
+  authMode = 'none';
 }
 
 export interface RedditPost {
@@ -149,22 +166,28 @@ function parseComment(
   };
 }
 
-// Build URL based on whether we're using OAuth
+// Build URL based on current auth mode
 function buildUrl(path: string): string {
-  const baseUrl = useOAuth ? OAUTH_BASE_URL : PUBLIC_BASE_URL;
+  // OAuth uses oauth.reddit.com, cookies use www.reddit.com
+  const baseUrl = authMode === 'oauth' ? OAUTH_BASE_URL : PUBLIC_BASE_URL;
   return `${baseUrl}${path}`;
 }
 
-// Get headers based on whether we're using OAuth
+// Get headers based on current auth mode
 async function getHeaders(): Promise<Record<string, string>> {
   const headers: Record<string, string> = {
     'User-Agent': USER_AGENT,
   };
 
-  if (useOAuth && tokenProvider) {
+  if (authMode === 'oauth' && tokenProvider) {
     const token = await tokenProvider();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+  } else if (authMode === 'cookies' && cookieProvider) {
+    const cookies = await cookieProvider();
+    if (cookies) {
+      headers['Cookie'] = cookies;
     }
   }
 
@@ -199,14 +222,27 @@ async function fetchWithRetry(
       }
 
       if (response.status === 403) {
-        // Try OAuth fallback if we haven't already and have a token provider
-        if (!useOAuth && tokenProvider) {
-          const token = await tokenProvider();
-          if (token) {
-            console.log('Public API returned 403, falling back to OAuth...');
-            useOAuth = true;
-            // Retry with OAuth immediately (don't count as retry attempt)
-            return fetchWithRetry(urlPath, retries);
+        // Try auth fallback if we haven't already
+        if (authMode === 'none') {
+          // First try cookies (browser auth) as it's more user-friendly
+          if (cookieProvider) {
+            const cookies = await cookieProvider();
+            if (cookies) {
+              console.log('Public API returned 403, falling back to browser auth...');
+              authMode = 'cookies';
+              // Retry with cookies immediately (don't count as retry attempt)
+              return fetchWithRetry(urlPath, retries);
+            }
+          }
+          // Then try OAuth
+          if (tokenProvider) {
+            const token = await tokenProvider();
+            if (token) {
+              console.log('Public API returned 403, falling back to OAuth...');
+              authMode = 'oauth';
+              // Retry with OAuth immediately (don't count as retry attempt)
+              return fetchWithRetry(urlPath, retries);
+            }
           }
         }
         return {
@@ -338,8 +374,8 @@ export async function fetchRedditData(
   subreddit: string,
   options: FetchOptions
 ): Promise<FetchResult> {
-  // Reset OAuth mode at the start of each fetch
-  useOAuth = false;
+  // Reset auth mode at the start of each fetch
+  authMode = 'none';
 
   console.log(
     `Fetching top posts from r/${subreddit} (period: ${options.period}, limit: ${options.limit})...`
