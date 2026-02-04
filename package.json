@@ -7,7 +7,8 @@
     "subreddit-insights": "./dist/cli.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "public"
   ],
   "scripts": {
     "build": "tsc",
@@ -15,6 +16,7 @@
     "dev": "tsx src/cli.ts",
     "server": "tsx src/server.ts",
     "server:build": "node dist/server.js",
+    "server:prod": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
