@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reddit Insights - Subreddit Analysis</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Reddit Insights</h1>
+      <p class="subtitle">Extract product insights from any subreddit using AI</p>
+    </header>
+
+    <main>
+      <form id="analyze-form" class="analyze-form">
+        <div class="form-group">
+          <label for="subreddit">Subreddit</label>
+          <input
+            type="text"
+            id="subreddit"
+            name="subreddit"
+            placeholder="e.g., r/startups or startups"
+            required
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="period">Time Period</label>
+            <select id="period" name="period">
+              <option value="7d">Last 7 days</option>
+              <option value="30d" selected>Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+              <option value="180d">Last 180 days</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="limit">Posts Limit</label>
+            <input
+              type="number"
+              id="limit"
+              name="limit"
+              value="50"
+              min="1"
+              max="500"
+            >
+          </div>
+        </div>
+
+        <button type="submit" id="analyze-btn" class="btn-primary">
+          <span class="btn-text">Analyze</span>
+          <span class="btn-loading" hidden>
+            <span class="spinner"></span>
+            Analyzing...
+          </span>
+        </button>
+      </form>
+
+      <div id="error-container" class="error-container" hidden>
+        <div class="error-message">
+          <strong>Error:</strong> <span id="error-text"></span>
+        </div>
+      </div>
+
+      <div id="loading-container" class="loading-container" hidden>
+        <div class="loading-spinner"></div>
+        <p id="loading-status">Fetching posts from Reddit...</p>
+        <p class="loading-hint">This may take a few minutes for large subreddits</p>
+      </div>
+
+      <div id="results-container" class="results-container" hidden>
+        <div class="results-header">
+          <h2>Analysis Results</h2>
+          <div class="results-meta">
+            <span id="results-subreddit"></span>
+            <span id="results-stats"></span>
+          </div>
+        </div>
+
+        <div id="results-content" class="results-content">
+          <!-- Results will be rendered here -->
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <p>Powered by GPT-4o | <a href="https://github.com/kirvlasenkov/subreddit-insights" target="_blank">GitHub</a></p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
